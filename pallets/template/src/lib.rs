@@ -33,10 +33,10 @@ pub mod pallet {
 	// The pallet's runtime storage items.
 	// https://docs.substrate.io/v3/runtime/storage
 	#[pallet::storage]
-	#[pallet::getter(fn something)]
+	#[pallet::getter(fn get)]
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
-	pub type Something<T> = StorageValue<_, u32>;
+	pub type KeyValueStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, u32>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events
@@ -45,7 +45,9 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
-		SomethingStored(u32, T::AccountId),
+		CreatedEvent(u32, T::AccountId),
+		UpdatedEvent(u32, T::AccountId),
+		DeletedEvent(u32, T::AccountId),
 	}
 
 	// Errors inform users that something went wrong.
@@ -64,39 +66,38 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
+
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://docs.substrate.io/v3/runtime/origins
+		pub fn create(origin: OriginFor<T>, something: u32) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-
 			// Update storage.
-			<Something<T>>::put(something);
-
+			<KeyValueStorage<T>>::insert(who.clone(), something);
 			// Emit an event.
-			Self::deposit_event(Event::SomethingStored(something, who));
+			Self::deposit_event(Event::CreatedEvent(something, who));
 			// Return a successful DispatchResultWithPostInfo
 			Ok(())
 		}
 
-		/// An example dispatchable that may throw a custom error.
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
-		pub fn cause_error(origin: OriginFor<T>) -> DispatchResult {
-			let _who = ensure_signed(origin)?;
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn update(origin: OriginFor<T>, something: u32) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			// Update storage.
+			<KeyValueStorage<T>>::insert(who.clone(), something);
+			// Emit an event.
+			Self::deposit_event(Event::CreatedEvent(something, who));
+			// Return a successful DispatchResultWithPostInfo
+			Ok(())
+		}
 
-			// Read a value from storage.
-			match <Something<T>>::get() {
-				// Return an error if the value has not been set.
-				None => Err(Error::<T>::NoneValue)?,
-				Some(old) => {
-					// Increment the value read from storage; will error in the event of overflow.
-					let new = old.checked_add(1).ok_or(Error::<T>::StorageOverflow)?;
-					// Update the value in storage with the incremented result.
-					<Something<T>>::put(new);
-					Ok(())
-				},
-			}
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn delete(origin: OriginFor<T>, something: u32) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			// Update storage.
+			<KeyValueStorage<T>>::remove(who.clone());
+			// Emit an event.
+			Self::deposit_event(Event::CreatedEvent(something, who));
+			// Return a successful DispatchResultWithPostInfo
+			Ok(())
 		}
 	}
 }
